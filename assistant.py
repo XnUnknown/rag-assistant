@@ -11,7 +11,6 @@ from rag import rag_search, build_context
 
 # ---------------- CONFIGURATION ----------------
 
-MODEL = "lfm3-omni:2b"
 MAX_TOOL_ROUNDS = 5
 DEFAULT_K = os.getenv("DEFAULT_K", 8)
 
@@ -35,6 +34,7 @@ def load_env():
 
 load_env()
 
+MODEL =  os.getenv("MODEL", "gemma4:31b")
 OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://localhost:11434")
 OLLAMA_API_KEY = os.getenv("OLLAMA_API_KEY", "")
 headers = {"Authorization": f"Bearer {OLLAMA_API_KEY}"} if OLLAMA_API_KEY else None
