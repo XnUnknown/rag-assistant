@@ -11,7 +11,7 @@ from rag import rag_search, build_context
 
 # ---------------- CONFIGURATION ----------------
 
-MODEL = os.getenv("MODEL", "llama3.2:1b")
+MODEL = os.getenv("MODEL", "gemma4:31b")
 # MODEL = "lfm3-omni:2b"
 MAX_TOOL_ROUNDS = 5
 DEFAULT_K = int(os.getenv("DEFAULT_K", 8))
