@@ -1,0 +1,9 @@
+venv/
+models/
+index.json
+__pycache__/
+
+# Local environment variables and API keys
+.env
+.env.*
+!.env.example
