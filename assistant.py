@@ -6,7 +6,8 @@ from rag import rag_search, build_context
 
 # ---------------- CONFIGURATION ----------------
 
-MODEL = "lfm3-omni:2b"
+MODEL = "llama3.2:1b"
+# MODEL = "lfm3-omni:2b"
 MAX_TOOL_ROUNDS = 5
 DEFAULT_K = 8
 
@@ -26,21 +27,22 @@ messages = [
     {
         "role": "system",
         "content": """
-You are a technical research assistant connected to a PDF knowledge base.
+You are an expert Neo4j Database and Cypher technical assistant connected to the official Neo4j documentation knowledge base.
 
 RULES:
-- For technical questions, research papers, AI architectures,
-  machine learning, neural networks and technical concepts,
+- For questions about Neo4j, Cypher query syntax, graph data modeling,
+  database operations, configuration (neo4j.conf), Python driver APIs,
+  status codes, performance tuning, and technical concepts,
   you MUST call search_knowledge before answering.
-- Do not answer technical questions from memory without searching.
-- If the first search is insufficient, search again using
-  alternative technical terminology.
-- Combine relevant retrieved passages.
-- Base your answer on retrieved documents.
-- Cite document names and page numbers.
-- Never invent facts, numbers or citations.
-- If the documents do not contain the answer, say so clearly.
-- Explain concepts in detail.
+- Do not answer Neo4j or technical questions from memory without searching.
+- If the first search is insufficient, search again using alternative
+  technical terminology (e.g., exact Cypher clauses, config keys, error codes).
+- Provide clear, syntactically valid Cypher queries, code snippets, or configuration examples when appropriate.
+- Base your answers strictly on the retrieved documentation passages.
+- Cite the exact document names and page numbers (e.g., "neo4j-cypher-manual-25.pdf, pages 45-46").
+- Never invent clauses, procedures, configuration settings, or status codes.
+- If the documentation does not contain the answer, say so clearly.
+- Explain concepts and query mechanics clearly.
 - For greetings and general conversation, tool usage is unnecessary.
 """
     }
@@ -54,8 +56,9 @@ tools = [
         "function": {
             "name": "search_knowledge",
             "description": (
-                "Search the local PDF knowledge base using semantic "
-                "and keyword retrieval. MUST be used for technical questions."
+                "Search the official Neo4j documentation knowledge base (Cypher manual, "
+                "Operations manual, Python driver, status codes) using semantic and "
+                "keyword retrieval. MUST be used for Neo4j and technical questions."
             ),
             "parameters": {
                 "type": "object",
