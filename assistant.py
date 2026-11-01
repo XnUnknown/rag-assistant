@@ -11,8 +11,10 @@ from rag import rag_search, build_context
 
 # ---------------- CONFIGURATION ----------------
 
+MODEL = os.getenv("MODEL", "llama3.2:1b")
+# MODEL = "lfm3-omni:2b"
 MAX_TOOL_ROUNDS = 5
-DEFAULT_K = os.getenv("DEFAULT_K", 8)
+DEFAULT_K = int(os.getenv("DEFAULT_K", 8))
 
 BASE_DIR = Path(__file__).resolve().parent
 
@@ -34,7 +36,6 @@ def load_env():
 
 load_env()
 
-MODEL =  os.getenv("MODEL", "gemma4:31b")
 OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://localhost:11434")
 OLLAMA_API_KEY = os.getenv("OLLAMA_API_KEY", "")
 headers = {"Authorization": f"Bearer {OLLAMA_API_KEY}"} if OLLAMA_API_KEY else None
@@ -45,21 +46,22 @@ messages = [
     {
         "role": "system",
         "content": """
-You are a technical research assistant connected to a PDF knowledge base.
+You are an expert Neo4j Database and Cypher technical assistant connected to the official Neo4j documentation knowledge base.
 
 RULES:
-- For technical questions, research papers, AI architectures,
-  machine learning, neural networks and technical concepts,
+- For questions about Neo4j, Cypher query syntax, graph data modeling,
+  database operations, configuration (neo4j.conf), Python driver APIs,
+  status codes, performance tuning, and technical concepts,
   you MUST call search_knowledge before answering.
-- Do not answer technical questions from memory without searching.
-- If the first search is insufficient, search again using
-  alternative technical terminology.
-- Combine relevant retrieved passages.
-- Base your answer on retrieved documents.
-- Cite document names and page numbers.
-- Never invent facts, numbers or citations.
-- If the documents do not contain the answer, say so clearly.
-- Explain concepts in detail.
+- Do not answer Neo4j or technical questions from memory without searching.
+- If the first search is insufficient, search again using alternative
+  technical terminology (e.g., exact Cypher clauses, config keys, error codes).
+- Provide clear, syntactically valid Cypher queries, code snippets, or configuration examples when appropriate.
+- Base your answers strictly on the retrieved documentation passages.
+- Cite the exact document names and page numbers (e.g., "neo4j-cypher-manual-25.pdf, pages 45-46").
+- Never invent clauses, procedures, configuration settings, or status codes.
+- If the documentation does not contain the answer, say so clearly.
+- Explain concepts and query mechanics clearly.
 - For greetings and general conversation, tool usage is unnecessary.
 """
     }
@@ -73,8 +75,9 @@ tools = [
         "function": {
             "name": "search_knowledge",
             "description": (
-                "Search the local PDF knowledge base using semantic "
-                "and keyword retrieval. MUST be used for technical questions."
+                "Search the official Neo4j documentation knowledge base (Cypher manual, "
+                "Operations manual, Python driver, status codes) using semantic and "
+                "keyword retrieval. MUST be used for Neo4j and technical questions."
             ),
             "parameters": {
                 "type": "object",
@@ -134,11 +137,13 @@ def execute_tool(tool_call):
 
     if name == "search_knowledge":
         try:
+            search_started = time.perf_counter()
             result = search_knowledge(
                 arguments["query"],
                 arguments.get("k", DEFAULT_K)
             )
-            print("[TOOL COMPLETED]")
+            search_elapsed = time.perf_counter() - search_started
+            print(f"[TOOL COMPLETED] in {search_elapsed:.2f}s")
             return result
 
         except Exception as error:
@@ -150,6 +155,8 @@ def execute_tool(tool_call):
 # ---------------- ASSISTANT ----------------
 
 def ask(question):
+    total_started = time.perf_counter()
+
     messages.append({
         "role": "user",
         "content": question
@@ -159,12 +166,15 @@ def ask(question):
         print(f"\n[MODEL ROUND {round_no + 1}]")
 
         # Tool-calling stage: non-streaming
+        llm_started = time.perf_counter()
         response = client.chat(
             model=MODEL,
             messages=messages,
             tools=tools,
             stream=False
         )
+        llm_elapsed = time.perf_counter() - llm_started
+        print(f"[MODEL ROUND {round_no + 1}] LLM latency: {llm_elapsed:.2f}s")
 
         assistant_message = response.message
         tool_calls = assistant_message.tool_calls or []
@@ -185,6 +195,7 @@ def ask(question):
             print("\nAssistant: ", end="", flush=True)
 
             # Stream final answer
+            stream_started = time.perf_counter()
             stream = client.chat(
                 model=MODEL,
                 messages=messages[:-1] + [
@@ -201,7 +212,10 @@ def ask(question):
                     final_answer += text
                     print(text, end="", flush=True)
 
+            stream_elapsed = time.perf_counter() - stream_started
+            total_elapsed = time.perf_counter() - total_started
             print()
+            print(f"[Latency] final stream: {stream_elapsed:.2f}s | total: {total_elapsed:.2f}s")
 
             # Keep the actual streamed answer in history
             messages[-1] = {
